@@ -1,0 +1,23 @@
+server:
+  port: 8081
+
+volcano:
+  api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
+  api-key: ${DASHSCOPE_API_KEY}
+  model: glm-4-7-251222
+
+logging:
+  level:
+    org.springframework.ai.model.tool: DEBUG
+
+spring:
+  ai:
+    mcp:
+      client:
+        stdio:
+          connections:
+            dev-tools-server:
+              command: java
+              args:
+                - "-jar"
+                - "${MCP_SERVER_JAR}/chap-2-3-mcp-server-1.0-SNAPSHOT.jar"
