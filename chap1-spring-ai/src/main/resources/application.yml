@@ -1,0 +1,4 @@
+volcano:
+  api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
+  api-key: ${DASHSCOPE_API_KEY}
+  model: glm-4-7-251222
