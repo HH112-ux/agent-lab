@@ -1,0 +1,15 @@
+server:
+  port: 8080
+
+volcano:
+  chat:
+    api-url: https://ark.cn-beijing.volces.com/api/v3/chat/completions
+    api-key: ${DASHSCOPE_API_KEY}
+    model: glm-4-7-251222
+
+logging:
+  level:
+    root: WARN
+    com.caspian.agent.multiagent: INFO
+  pattern:
+    console: "%d{HH:mm:ss} %highlight(%-5level) %cyan(%logger{20}) - %msg%n"
