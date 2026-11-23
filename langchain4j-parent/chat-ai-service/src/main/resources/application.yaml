@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: chat-ai-service
+server:
+  port: 8083
+
+langchain4j:
+  community:
+    dashscope:
+      chat-model:
+        api-key: "${DASHSCOPE_API_KEY}"
+        max-tokens: 5000
+        model-name: 'qwen-plus'
+        temperature: 0.7
+      streaming-chat-model:
+        api-key: "${DASHSCOPE_API_KEY}"
+        model-name: 'qwen-plus'
+  open-ai:
+    chat-model:
+      api-key: 'demo'
+      model-name: 'gpt-4o-mini'
+      base-url: 'http://langchain4j.dev/demo/openai/v1'

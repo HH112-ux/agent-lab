@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>十指波课堂 AI 聊天助手</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .chat-container { width: 800px; height: 600px; background: white; border-radius: 16px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column; overflow: hidden; }
+        .chat-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; color: white; }
+        .chat-header h1 { font-size: 24px; font-weight: 600; }
+        .chat-header p { font-size: 14px; opacity: 0.9; margin-top: 5px; }
+        .chat-messages { flex: 1; padding: 20px; overflow-y: auto; background: #f5f5f5; }
+        .message { margin-bottom: 16px; display: flex; align-items: flex-start; }
+        .message.user { justify-content: flex-end; }
+        .message.assistant { justify-content: flex-start; }
+        .message-content { max-width: 70%; padding: 12px 16px; border-radius: 12px; line-height: 1.5; word-wrap: break-word; white-space: pre-wrap; }
+        .message.user .message-content { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-bottom-right-radius: 4px; }
+        .message.assistant .message-content { background: white; color: #333; border-bottom-left-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); }
+        .chat-input-container { padding: 20px; background: white; border-top: 1px solid #e0e0e0; }
+        .chat-input-form { display: flex; gap: 12px; }
+        #messageInput { flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 24px; font-size: 16px; outline: none; transition: border-color 0.3s; }
+        #messageInput:focus { border-color: #667eea; }
+        #sendButton { padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 24px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+        #sendButton:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        #sendButton:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .typing::after { content: '...'; animation: typing 1.5s steps(4, end) infinite; }
+        @keyframes typing { 0%, 100% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+        .welcome-message { text-align: center; color: #666; padding: 40px 20px; }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <div class="chat-header">
+        <h1>AI 聊天助手</h1>
+        <p>基于 LangChain4j 和 DashScope 的智能对话系统（流式响应）</p>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+        <div class="welcome-message">
+            <h2>欢迎使用 AI 聊天助手！</h2>
+            <p>请在下方输入您的问题，我会尽力为您解答。</p>
+        </div>
+    </div>
+    <div class="chat-input-container">
+        <form class="chat-input-form" id="chatForm">
+            <input type="text" id="messageInput" placeholder="输入您的问题..." autocomplete="off" required>
+            <button type="submit" id="sendButton">发送</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const welcomeMessage = document.querySelector('.welcome-message');
+
+    function removeWelcomeMessage() {
+        if (welcomeMessage && welcomeMessage.parentNode) {
+            welcomeMessage.remove();
+        }
+    }
+
+    function addMessage(content, isUser = false) {
+        removeWelcomeMessage();
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+        const messageContent = document.createElement('div');
+        messageContent.className = 'message-content';
+        messageContent.textContent = content;
+        messageDiv.appendChild(messageContent);
+        chatMessages.appendChild(messageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+        return messageContent;
+    }
+
+    async function sendMessage(messageText) {
+        // 1. UI 初始化
+        addMessage(messageText, true);
+        removeWelcomeMessage();
+
+        const aiMessageDiv = document.createElement('div');
+        aiMessageDiv.className = 'message assistant';
+        const aiContentDiv = document.createElement('div');
+        aiContentDiv.className = 'message-content typing'; // 初始显示打字动画
+        aiContentDiv.textContent = '';
+        aiMessageDiv.appendChild(aiContentDiv);
+        chatMessages.appendChild(aiMessageDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        sendButton.disabled = true;
+        messageInput.disabled = true;
+
+        let fullText = '';
+
+        try {
+            // 2. 发起 fetch 请求
+            const response = await fetch('/case/chatSse', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ message: messageText })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // 3. 获取流读取器
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            // 4. 循环读取流
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                // 解码二进制块
+                const chunk = decoder.decode(value, { stream: true });
+                buffer += chunk;
+
+                // SSE 协议规定事件以 \n\n 分隔
+                // 我们分割缓冲区，保留最后一个可能不完整的事件在 buffer 中
+                let parts = buffer.split('\n\n');
+
+                // 如果最后一部分不以 \n\n 结尾，说明它是不完整的，留到下一次循环
+                if (buffer.endsWith('\n\n')) {
+                    buffer = '';
+                } else {
+                    buffer = parts.pop(); // 取出最后一个不完整的部分
+                }
+
+                // 处理所有完整的事件块
+                for (let part of parts) {
+                    if (!part.trim()) continue; // 跳过空行
+
+                    // SSE 格式可能包含多行，我们需要逐行查找 data:
+                    const lines = part.split('\n');
+                    for (const line of lines) {
+                        // 兼容 "data: content" 和 "data:content" (有无空格)
+                        if (line.startsWith('data:')) {
+                            // 提取数据：去掉前缀 "data:" 以及紧随其后的可选空格
+                            let content = line.substring(5);
+                            if (content.startsWith(' ')) {
+                                content = content.substring(1);
+                            }
+
+                            // 移除打字动画类
+                            if (aiContentDiv.classList.contains('typing')) {
+                                aiContentDiv.classList.remove('typing');
+                            }
+
+                            fullText += content;
+                            aiContentDiv.textContent = fullText;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    }
+                }
+            }
+
+            // 处理最后残留的缓冲区（如果连接正常关闭，这里可能还有最后一段数据）
+            if (buffer.trim().startsWith('data:')) {
+                const lines = buffer.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data:')) {
+                        let content = line.substring(5);
+                        if (content.startsWith(' ')) content = content.substring(1);
+                        fullText += content;
+                    }
+                }
+                aiContentDiv.textContent = fullText;
+            }
+
+        } catch (error) {
+            console.error('Stream Error:', error);
+            aiContentDiv.classList.remove('typing');
+            aiContentDiv.textContent += '\n[连接异常: ' + error.message + ']';
+        } finally {
+            sendButton.disabled = false;
+            messageInput.disabled = false;
+            messageInput.value = '';
+            messageInput.focus();
+        }
+    }
+
+    chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const message = messageInput.value.trim();
+        if (!message) return;
+        sendMessage(message);
+    });
+</script>
+</body>
+</html>
