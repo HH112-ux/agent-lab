@@ -1,0 +1,13 @@
+spring:
+  ai:
+    openai:
+      base-url: https://ark.cn-beijing.volces.com/api/v3
+      api-key: ${DASHSCOPE_API_KEY}
+      chat:
+        options:
+          model: glm-4-7-251222
+        completions-path: /chat/completions
+      embedding:
+        options:
+          model: doubao-embedding-text-240715
+        embeddings-path: /embeddings
