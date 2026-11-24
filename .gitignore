@@ -15,3 +15,8 @@ dependency-reduced-pom.xml
 .env
 application-local.yml
 application-local.yaml
+
+# 课件讲稿与整理讲义：仅本地保留，仓库只放代码
+/docs/
+/langchain4j-courseware/
+*LECTURE.md

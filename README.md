@@ -2,8 +2,17 @@
 
 Caspian 的学习复刻仓库。源码从 `../代码/` 全量复刻，命名统一为个人规范，密钥已脱敏。
 
-- 📖 **完整讲义**：[`docs/AI智能体完整讲义.md`](docs/AI智能体完整讲义.md) —— 三轨素材（LangChain4j 基础 / Spring AI 工具链 / Agent 架构）合并为 20 章。
-- 🐛 **已知问题清单**：见讲义第 19 章（含 1 条影响运行的 ReAct 语义缺陷）。
+## 仓库范围
+
+**只入库代码**：Java 源码、`pom.xml`、`src/main/resources/`（配置与 `static/index.html`）、`chap-3-1-single-agent/contracts/` 示例合同。
+
+以下内容**仅本地保留**，已在 `.gitignore` 排除、不会推送到远端：
+
+- 整理讲义 `docs/AI智能体完整讲义.md`（20 章，三轨素材合并）；
+- 原始课件 `langchain4j-courseware/`（day01–day08 讲稿 + 截图）；
+- 各模块自带的 `*LECTURE.md` 教师讲稿。
+
+文中提到的"讲义 §N.N"章节号指本地 `docs/AI智能体完整讲义.md`，不在仓库内。
 
 ## 命名规范
 
@@ -13,7 +22,7 @@ Caspian 的学习复刻仓库。源码从 `../代码/` 全量复刻，命名统�
 | Java 包根 | 统一 `com.caspian.agent.<模块叶名>`，模块内子包结构原样保留 |
 | 模块目录名 / `artifactId` | **保留原名**，与 `../代码/` 一一对应 |
 
-完整映射表见讲义 §16.2。
+完整映射表见本地讲义 §16.2（未入库）。
 
 ## 模块清单
 
@@ -29,12 +38,11 @@ Caspian 的学习复刻仓库。源码从 `../代码/` 全量复刻，命名统�
 | `chap-3-1-single-agent` | `com.caspian.agent.singleagent` | 单 Agent：ReAct + PlanAct + 三级记忆 | CLI |
 | `chap-4-multi-agent` | `com.caspian.agent.multiagent` | 多 Agent：角色 / A2A / 编排 / 冲突 | 8080 |
 | `chap-5-graph-workflow` | `com.caspian.agent.graphworkflow` | Graph 工作流：State / Node / Edge | 8080 |
-| `langchain4j-courseware/` | — | day01–day08 原始讲稿（已脱敏） | — |
 
 ## 快速开始
 
 ```bash
-# 1) 注入密钥（原始值请到 ../代码/ 的配置文件里取，不要写回仓库）
+# 1) 注入密钥（原始明文值只在本地 ../代码/ 里，不要写回仓库）
 export DASHSCOPE_API_KEY=你的百炼或方舟key
 export VOLCANO_API_KEY=你的方舟key           # chap-3-1 用
 export JINA_API_KEY=你的jina密钥             # 可选，chat-rag 重排序
@@ -61,6 +69,6 @@ cd ../chap-2-3-mcp-client && mvn -q spring-boot:run
 - `chap-rag` 里硬编码的外部 Chroma 地址与 Jina key → 环境变量。
 - 修正 4 处拼写不规范标识符（`chatMedel` / `converEncoding` / `queryprocessTool` / 无用 import）。
 - 两个 `static/index.html` 从模块根移到 `src/main/resources/static/`（原先 Spring 不会托管）。
-- **修复了 2 处影响 Agent 正确性的缺陷**（其余已知问题原样保留在讲义第 19 章）：
+- **修复了 2 处影响 Agent 正确性的缺陷**（其余已知问题列在本地讲义第 19 章，未入库）：
   - §19.3 ReAct 循环中工具执行结果未回喂给模型 —— 已补 `conversation.add(observation)`，伪模型断言验证通过。
   - §19.4 长期记忆只沉淀 `summary`、丢失结构化风险 —— 已新增 `风险|等级|描述|修正建议` 行式协议 + `parseRiskItems()`，落库补齐 `risks[]` 与三级计数。
