@@ -61,4 +61,6 @@ cd ../chap-2-3-mcp-client && mvn -q spring-boot:run
 - `chap-rag` 里硬编码的外部 Chroma 地址与 Jina key → 环境变量。
 - 修正 4 处拼写不规范标识符（`chatMedel` / `converEncoding` / `queryprocessTool` / 无用 import）。
 - 两个 `static/index.html` 从模块根移到 `src/main/resources/static/`（原先 Spring 不会托管）。
-- **运行语义未改动**，已知缺陷原样保留并在讲义第 19 章标注为练习。
+- **修复了 2 处影响 Agent 正确性的缺陷**（其余已知问题原样保留在讲义第 19 章）：
+  - §19.3 ReAct 循环中工具执行结果未回喂给模型 —— 已补 `conversation.add(observation)`，伪模型断言验证通过。
+  - §19.4 长期记忆只沉淀 `summary`、丢失结构化风险 —— 已新增 `风险|等级|描述|修正建议` 行式协议 + `parseRiskItems()`，落库补齐 `risks[]` 与三级计数。

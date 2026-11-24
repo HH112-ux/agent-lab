@@ -174,15 +174,16 @@ public class ContractAuditAgent {
                 }
             }
             parseMemorySettings(llmResponse);
+            parseRiskItems(llmResponse);
 
             if (llmResponse.contains("最终答案:") || llmResponse.contains("最终答案：")) {
                 finished = true;
                 System.out.println(" [完成] LLM审核完成");
             } else {
                 String action = extractAction(llmResponse);
+                String observation;
                 if (action != null) {
                     AgentTool tool = findTool(action);
-                    String observation;
                     if (tool != null) {
                         try {
                             String result = tool.execute(memory);
@@ -195,10 +196,38 @@ public class ContractAuditAgent {
                         observation = "观察：工具\"" + action + "\"不存在，可用：" + String.join(", ", toolRegistry.keySet());
                     }
                 } else {
-                    conversation.add(Map.of("role", "user", "content",
-                            "观察: 请继续分析。完成后设置reportContent和experienceSummary，输出最终答案。"));
+                    observation = "观察: 请继续分析。完成后设置reportContent和experienceSummary，逐行列出风险，最后输出最终答案。";
                 }
+                conversation.add(Map.of("role", "user", "content", observation));
             }
+        }
+    }
+
+    /** 解析模型按 "风险|等级|描述|修正建议" 逐行给出的风险清单，写入工作记忆 riskItems。 */
+    private void parseRiskItems(String llmResponse) {
+        List<Map<String, String>> risks = new ArrayList<>();
+        for (String line : llmResponse.split("\n")) {
+            String trimmed = line.trim();
+            int sep = trimmed.indexOf('|');
+            if (sep < 0) {
+                continue;
+            }
+            String head = trimmed.substring(0, sep).trim();
+            if (!head.startsWith("风险")) {
+                continue;
+            }
+            String[] parts = trimmed.split("\\|", -1);
+            Map<String, String> risk = new LinkedHashMap<>();
+            risk.put("level", parts.length > 1 ? parts[1].trim() : "");
+            risk.put("description", parts.length > 2 ? parts[2].trim() : "");
+            risk.put("suggestion", parts.length > 3 ? parts[3].trim() : "");
+            if (!risk.get("description").isEmpty()) {
+                risks.add(risk);
+            }
+        }
+        if (!risks.isEmpty()) {
+            memory.saveWorking("riskItems", risks);
+            System.out.println("   [记忆]riskItems 已记录 " + risks.size() + " 条风险");
         }
     }
 
@@ -273,7 +302,8 @@ public class ContractAuditAgent {
         sb.append("1. 每步用\"思考:\"说明推理过程\n");
         sb.append("2. 审核完成后，用\"设置记忆: reportContent=报告内容\"保存报告（按高/中/低风险分类，含修正建议）\n");
         sb.append("3. 用\"设置记忆: experienceSummary=经验摘要\"保存关键发现\n");
-        sb.append("4. 最后输出\"最终答案:\"给出审核结论\n\n");
+        sb.append("4. 逐条列出风险，每条单独一行，格式：风险|等级|描述|修正建议 （等级只能是 高、中、低 三者之一）\n");
+        sb.append("5. 最后输出\"最终答案:\"给出审核结论\n\n");
 
         // 合同全文
         sb.append("## 合同全文\n").append(contractContent);

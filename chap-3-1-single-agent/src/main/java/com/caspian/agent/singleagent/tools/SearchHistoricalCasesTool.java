@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 
 public class SearchHistoricalCasesTool implements AgentTool {
+
+    /** 历史案例有两种落库格式：种子数据是扁平的 riskDescription/suggestion，Agent 沉淀的新案例是结构化 risks[]。 */
+    @SuppressWarnings("unchecked")
     @Override
     public String execute(AgentMemory memory) throws Exception {
 
@@ -48,13 +51,22 @@ public class SearchHistoricalCasesTool implements AgentTool {
                 List<Map<String, String>> riskList = (List<Map<String, String>>) risks;
                 for (Map<String, String> risk : riskList) {
                     sb.append(" - [").append(risk.getOrDefault("level", ""))
-                            .append("] ").append(risk.getOrDefault("description", "")).append("\n");
+                            .append("] ").append(risk.getOrDefault("description", ""));
+                    String suggestion = risk.getOrDefault("suggestion", "");
+                    if (!suggestion.isEmpty()) {
+                        sb.append(" → 建议: ").append(suggestion);
+                    }
+                    sb.append("\n");
                 }
             }
 
             if (c.containsKey("riskDescription")) {
                 sb.append(" 主要风险: ").append(c.getOrDefault("riskDescription", "")).append("\n");
                 sb.append(" 修正建议: ").append(c.getOrDefault("suggestion", "")).append("\n");
+            }
+            Object summary = c.get("summary");
+            if (summary != null && !summary.toString().isEmpty()) {
+                sb.append(" 经验摘要: ").append(summary).append("\n");
             }
         }
         return sb.toString();
